@@ -1,20 +1,9 @@
-import cPickle
-import curses
-from curses import wrapper
 import heapq
-import os.path
-import re
-import sys
-import textwrap
 
 
-def read_words():
-    with open("words") as dict_file:
-        words = [word.lower().rstrip() for word
-                in dict_file.readlines()
-                if re.match("^[A-Za-z]+$", word)]
-
-        return words
+def autocomplete(prefix, words, count=5):
+    proximity = lambda word: edit_distance(prefix, word)
+    return heapq.nsmallest(count, words, key=proximity)
 
 
 def build_trie(words):
@@ -30,6 +19,7 @@ def build_trie(words):
 
 
 def build_bktree(words):
+    """Build a BK-tree from list of words."""
     root = (words[0], 0)
     bk_tree = {root: {}}
     for i in xrange(1, len(words)):
@@ -38,6 +28,7 @@ def build_bktree(words):
 
 
 def bktree_add(bk_tree, root, word):
+    """Add a word to a BK-tree."""
     distance = edit_distance(root[0], word)
     collision = False
     for (child, child_distance) in bk_tree[root].keys():
@@ -50,6 +41,7 @@ def bktree_add(bk_tree, root, word):
 
 
 def bktree_search(bk_tree, root, prefix, tolerance=2, matches=None):
+    """Search BK-tree for words within a given edit distance of prefix."""
     if matches is None:
         matches = []
     distance =  edit_distance(prefix, root[0])
@@ -64,11 +56,8 @@ def bktree_search(bk_tree, root, prefix, tolerance=2, matches=None):
     return matches
 
 
-def autocomplete(prefix, words):
-    return closest_matches(prefix, words)
-
-
 def edit_distance(prefix, word):
+    """Calculate edit distance between prefix and word."""
     dp = [[0 for _ in xrange(len(word) + 1)] for _ in xrange(len(prefix) + 1)]
     for i in xrange(1, len(prefix) + 1):
         dp[i][0] = i
@@ -87,54 +76,3 @@ def edit_distance(prefix, word):
             dp[i][j] = min(delete_min, insert_min, replacement_min)
 
     return dp[len(prefix)][len(word)]
-
-
-def nclosest_matches(count, prefix, words):
-    #proximity = lambda word: edit_distance(prefix, word)
-    return heapq.nsmallest(count, words, key=lambda word: edit_distance(prefix, word))
-
-
-def main(stdscr):
-    curses.cbreak()
-    stdscr.keypad(True)
-    bk_tree = None
-    if os.path.isfile("bk_tree.p"):
-        stdscr.addstr("Loading serialized BK-tree from file...\n")
-        bk_tree = cPickle.load(open("bk_tree.p", "rb"))
-    else:
-        stdscr.addstr("Reading words from file...\n")
-        stdscr.refresh()
-        words = read_words()
-        stdscr.addstr("Building BK-tree...\n")
-        stdscr.refresh()
-        bk_tree = build_bktree(words)
-        stdscr.addstr("Dumping serialized BK-tree to file...\n")
-        stdscr.refresh()
-        cPickle.dump(bk_tree, open("bk_tree.p", "wb"))
-
-    prefix = ""
-    root = bk_tree.keys()[0]
-
-    message = "\n".join(["Auto-complete ready.",
-            "Start typing a word...",
-            "Ctrl+D to exit."]) + "\n"
-    stdscr.addstr(message)
-
-    while True:
-        c = stdscr.getch()
-        if c == 4 or c == 3:
-            break
-        if c == ord("\n"):
-            prefix = ""
-        else:
-            prefix += chr(c)
-
-        matches = bktree_search(bk_tree[root], root, prefix)
-
-        stdscr.clear()
-        stdscr.addstr(message)
-        stdscr.addstr(prefix + "\n")
-        stdscr.addstr(str(nclosest_matches(5, prefix, matches)) + "\n")
-
-
-wrapper(main)
