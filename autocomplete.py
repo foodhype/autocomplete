@@ -6,18 +6,6 @@ def autocomplete(prefix, words, count=5):
     return heapq.nsmallest(count, words, key=proximity)
 
 
-def build_trie(words):
-    trie = {}
-    for word in words:
-        current = trie
-        for c in word:
-            if c not in current:
-                current[c] = {}
-            current = current[c]
-
-    return trie
-
-
 def build_bktree(words):
     """Build a BK-tree from list of words."""
     root = (words[0], 0)
