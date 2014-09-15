@@ -1,9 +1,48 @@
+from collections import Counter
 import heapq
 
 
-def autocomplete(prefix, words, count=5):
-    proximity = lambda word: edit_distance(prefix, word)
-    return heapq.nsmallest(count, words, key=proximity)
+def autocomplete(trie, bk_tree, prefix, count=5):
+    for c in prefix:
+        if c in trie.children.keys():
+            trie = trie.children[c]
+        else:
+            matches = bktree_search(bk_tree, prefix)
+            proximity = lambda completion: edit_distance(prefix, completion)
+            return heapq.nsmallest(count, matches, key=proximity)
+
+    freq = lambda completion: trie.completion_frequencies[completion]
+    proximity = lambda completion: float("inf") if prefix == completion else 1.0 / float(len(completion))
+    selection_criteria = lambda completion: (
+            freq(completion), proximity(completion))
+    completions = trie.completion_frequencies.keys()
+
+    return heapq.nlargest(count, completions, key=selection_criteria)
+
+
+def build_trie(words):
+    """Build a Trie from list of words."""
+    trie = Trie()
+    for word in words:
+        trie_add(trie, word)
+
+    return trie
+
+
+def trie_add(trie, word):
+    """Add a word to a Trie."""
+    current = trie
+    for c in word:
+        if c not in current.children.keys():
+            current.children[c] = Trie()
+        current = current.children[c]
+        current.completion_frequencies[word] += 1
+
+
+class Trie(object):
+    def __init__(self):
+        self.children = {}
+        self.completion_frequencies = Counter()
 
 
 def build_bktree(words):
@@ -11,35 +50,41 @@ def build_bktree(words):
     root = (words[0], 0)
     bk_tree = {root: {}}
     for i in xrange(1, len(words)):
-        bktree_add(bk_tree, root, words[i])
+        bktree_add(bk_tree, words[i])
+
     return bk_tree
 
 
-def bktree_add(bk_tree, root, word):
+def bktree_add(bk_tree, word, root=None):
     """Add a word to a BK-tree."""
+    if root is None:
+        root = bk_tree.keys()[0]
     distance = edit_distance(root[0], word)
     collision = False
     for (child, child_distance) in bk_tree[root].keys():
         if distance == child_distance:
-            bktree_add(bk_tree[root], (child, child_distance), word)
+            bktree_add(bk_tree[root], word, (child, child_distance))
             collision = True
             break
     if not collision:
         bk_tree[root][(word, distance)] = {}
 
 
-def bktree_search(bk_tree, root, prefix, tolerance=2, matches=None):
+def bktree_search(bk_tree, prefix, tolerance=2, root=None, matches=None):
     """Search BK-tree for words within a given edit distance of prefix."""
+    if root is None:
+        root = bk_tree.keys()[0]
     if matches is None:
         matches = []
-    distance =  edit_distance(prefix, root[0])
-    if distance <= tolerance:
+
+    root_distance = edit_distance(prefix, root[0])
+    if root_distance <= tolerance:
         matches.append(root[0])
 
-    for word, root_distance in bk_tree.keys():
-        if distance - tolerance <= root_distance <= distance + tolerance:
-            child = (word, root_distance)
-            bktree_search(bk_tree[child], child, prefix, tolerance, matches)
+    for word, distance in bk_tree.keys():
+        if root_distance - tolerance <= distance <= root_distance + tolerance:
+            child = (word, distance)
+            bktree_search(bk_tree[child], prefix, tolerance, child, matches)
 
     return matches
 
@@ -64,3 +109,12 @@ def edit_distance(prefix, word):
             dp[i][j] = min(delete_min, insert_min, replacement_min)
 
     return dp[len(prefix)][len(word)]
+
+
+def suffix_proximity_score(suffix):
+    """Calculate a score based on suffix length where a shorter length always
+    yields a higher score."""
+    if len(suffix) == 0:
+        return float("inf")
+    else:
+        return 1.0 / float(len(suffix))

@@ -6,12 +6,14 @@ import os.path
 import re
 
 
-def read_words(filename):
+def read_words(filenames):
     """Read newline-separated words from file."""
-    with open(filename) as word_file:
-        words = [word.lower().rstrip() for word
-            in word_file.readlines()
-            if re.match("^[A-Za-z]+$", word)]
+    for filename in filenames:
+        words = []
+        with open(filename) as word_file:
+            words += [word.lower().rstrip() for word
+                in word_file.readlines()
+                if re.match("^[a-z]+$", word)]
 
         return words
 
@@ -31,10 +33,24 @@ def dump_bk_tree(bk_tree, filename):
     cPickle.dump(bk_tree, open(filename, "wb"))
 
 
-def run_autocomplete_console(stdscr, bk_tree):
+def load_trie(filename):
+    """Load pickled BK-tree from file."""
+    return cPickle.load(open(filename, "rb"))
+
+
+def gen_trie(words):
+    """Generate BK-tree from words."""
+    return autocomplete.build_trie(words)
+
+
+def dump_trie(trie, filename):
+    """Pickle BK-tree and dump to file."""
+    cPickle.dump(trie, open(filename, "wb"))
+
+
+def run_autocomplete_console(stdscr, trie, bk_tree):
     """Run console for testing basic auto-complete functionality."""
     prefix = ""
-    root = bk_tree.keys()[0]
     message = "\n".join(["Auto-complete ready.",
             "Start typing a word...",
             "Ctrl+D to exit."]) + "\n"
@@ -52,8 +68,7 @@ def run_autocomplete_console(stdscr, bk_tree):
         else:
             continue
 
-        matches = autocomplete.bktree_search(bk_tree[root], root, prefix)
-        top_matches = autocomplete.autocomplete(prefix, matches)
+        top_matches = autocomplete.autocomplete(trie, bk_tree, prefix)
 
         stdscr.clear()
         stdscr.addstr(message)
@@ -67,20 +82,26 @@ def main(stdscr):
     curses.cbreak()
     stdscr.keypad(True)
 
+    trie = None
     bk_tree = None
-    filename = "bk_tree.p"
-    if os.path.isfile(filename):
-        stdscr.addstr("Loading serialized BK-tree from file...\n")
+    trie_filename = "trie.p"
+    bktree_filename = "bk_tree.p"
+    words_filenames = ["words", "connectives"]
+    if os.path.isfile(trie_filename) and os.path.isfile(bktree_filename):
+        stdscr.addstr("Loading serialized Trie and BK-tree from file...\n")
         stdscr.refresh()
-        bk_tree = load_bk_tree(filename)
+        trie = load_trie(trie_filename)
+        bk_tree = load_bk_tree(bktree_filename)
     else:
-        stdscr.addstr("Building BK-tree...\n")
+        stdscr.addstr("Building Trie and BK-tree...\n")
         stdscr.refresh()
-        words = read_words(filename)
+        words = read_words(words_filenames)
+        trie = gen_trie(words)
         bk_tree = gen_bk_tree(words)
-        dump_bk_tree(bk_tree, filename)
+        dump_trie(trie, trie_filename)
+        dump_bk_tree(bk_tree, bktree_filename)
 
-    run_autocomplete_console(stdscr, bk_tree)
+    run_autocomplete_console(stdscr, trie, bk_tree)
 
 
 wrapper(main)
