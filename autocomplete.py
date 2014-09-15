@@ -12,7 +12,8 @@ def autocomplete(trie, bk_tree, prefix, count=5):
             return heapq.nsmallest(count, matches, key=proximity)
 
     freq = lambda completion: trie.completion_frequencies[completion]
-    proximity = lambda completion: float("inf") if prefix == completion else 1.0 / float(len(completion))
+    proximity = lambda completion: completion_proximity_score(
+            prefix, completion)
     selection_criteria = lambda completion: (
             freq(completion), proximity(completion))
     completions = trie.completion_frequencies.keys()
@@ -111,10 +112,11 @@ def edit_distance(prefix, word):
     return dp[len(prefix)][len(word)]
 
 
-def suffix_proximity_score(suffix):
+def completion_proximity_score(prefix, completion):
     """Calculate a score based on suffix length where a shorter length always
     yields a higher score."""
-    if len(suffix) == 0:
+
+    if prefix == completion:
         return float("inf")
     else:
-        return 1.0 / float(len(suffix))
+        return 1.0 / float(len(completion))
