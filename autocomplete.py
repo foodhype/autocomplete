@@ -115,7 +115,6 @@ def edit_distance(prefix, word):
 def completion_proximity_score(prefix, completion):
     """Calculate a score based on suffix length where a shorter length always
     yields a higher score."""
-
     if prefix == completion:
         return float("inf")
     else:
