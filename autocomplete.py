@@ -18,9 +18,9 @@ def autocomplete(suggest_tree, bktree, prefix, count=5):
 
     
 def completion_proximity_score(prefix, completion):
-        """Calculate a score based on suffix length where a shorter length always
-        yields a higher score."""
-        if prefix == completion:
-            return float("inf")
-        else:
-            return 1.0 / float(len(completion))
+    """Calculate a score based on suffix length where a shorter length always
+    yields a higher score."""
+    if prefix == completion:
+        return float("inf")
+    else:
+        return 1.0 / float(len(completion))

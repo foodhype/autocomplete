@@ -15,15 +15,15 @@ class SuggestTree(object):
         self.last_index += 1
 
     def increment(self, word):
-        if word in inverted_index:
-            self.root.add(word, inverted_index[word])
+        if word in self.inverted_index:
+            self.root.add(word, self.inverted_index[word])
         else:
             self.add(word) 
 
     def search(self, prefix):
         trie = self.root
         for c in prefix:
-            if c in self.root.children.keys():
+            if c in trie.children.keys():
                 trie = trie.children[c]
             else:
                 return Counter()
@@ -36,7 +36,7 @@ class SuggestTree(object):
         return completion_frequencies
 
 
-class CompletionFrequencyTrie():
+class CompletionFrequencyTrie(object):
     def __init__(self):
         self.children = {}
         self.completion_frequencies = Counter()

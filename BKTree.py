@@ -1,46 +1,41 @@
 class BKTree(object):
-    def __init__(self):
+    def __init__(self, words):
         """Build a BK-tree from list of words."""
-        self.tree = {}
+        self.root = (words[0], 0)
+        self.tree = {self.root: {}}
+        for i in xrange(1, len(words)):
+            self.__add(self.tree, self.root, words[i])
         
-    def add(self, word, root=None):
+    def __add(self, tree, root, word):
         """Add a word."""
-        if root is None:
-            if self.tree:
-                root = self.tree.keys()[0]
-            else:
-                self.root = (word, 0)
-                self.tree = {root: {}}
-        else:
-            distance = self.edit_distance(root[0], word)
-            collision = False
-            for (child, child_distance) in self.tree[root].keys():
-                if distance == child_distance:
-                    bktree_add(self.tree[root], word, (child, child_distance))
-                    collision = True
-                    break
-            if not collision:
-                self.tree[root][(word, distance)] = {}
+        distance = self.edit_distance(root[0], word)
+        collision = False
+        for (child, child_distance) in tree[root].keys():
+            if distance == child_distance:
+                self.__add(tree[root], (child, child_distance), word)
+                collision = True
+                break
+        if not collision:
+            tree[root][(word, distance)] = {}
 
-
-    def search(self, prefix, tolerance=2, root=None, matches=None):
+    def search(self, prefix, tolerance=2, tree=None, root=None, matches=None):
         """Search BK-tree for words within a given edit distance of prefix."""
+        if tree is None:
+            tree = self.tree
         if root is None:
-            root = self.tree.keys()[0]
+            root = self.root
         if matches is None:
-            matches = []
-
+            matches = set()
         root_distance = self.edit_distance(prefix, root[0])
         if root_distance <= tolerance:
-            matches.append(root[0])
+            matches.add(root[0])
 
-        for word, distance in self.tree.keys():
+        for word, distance in tree.keys():
             if root_distance - tolerance <= distance <= root_distance + tolerance:
                 child = (word, distance)
-                self.search(self.tree[child], prefix, tolerance, child, matches)
+                self.search(prefix, tolerance, tree[child], child, matches)
 
         return matches
-
 
     def edit_distance(self, prefix, word):
         """Calculate edit distance between prefix and word."""

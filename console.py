@@ -10,10 +10,13 @@ from SuggestTree import SuggestTree
 
 def read_words(filename):
     """Read newline-separated words from file."""
+    words = []
     with open(filename) as word_file:
-        return [word.lower().rstrip() for word
-            in word_file.readlines()
-            if re.match("^[a-z]+$", word)]
+        for word in word_file.readlines():
+            if re.match("^[a-z]+$", word):
+                words.append(word.lower().rstrip())
+
+    return words
 
 
 def dump(obj, filename):
@@ -37,11 +40,7 @@ def gen_suggest_tree(words):
 
 def gen_bktree(words):
     """Generate BKTree from words."""
-    bktree = BKTree()
-    for word in words:
-        bktree.add(word)
-
-    return bktree
+    return BKTree(words)
 
 
 def run_autocomplete_console(stdscr, suggest_tree, bktree):
