@@ -20,12 +20,13 @@ class BKTree(object):
 
     def search(self, prefix, tolerance=2, tree=None, root=None, matches=None):
         """Search BK-tree for words within a given edit distance of prefix."""
-        if tree is None:
-            tree = self.tree
         if root is None:
             root = self.root
+        if tree is None:
+            tree = self.tree[self.root]
         if matches is None:
             matches = set()
+
         root_distance = self.edit_distance(prefix, root[0])
         if root_distance <= tolerance:
             matches.add(root[0])
@@ -56,4 +57,17 @@ class BKTree(object):
 
                 dp[i][j] = min(delete_min, insert_min, replacement_min)
 
-        return dp[len(prefix)][len(word)] 
+        return dp[len(prefix)][len(word)]
+
+    def __str__(self):
+        return self.format_tree(self.tree, self.root, 0)
+
+    def format_tree(self, tree, root, indentation):
+        formatted =  " " * indentation + str(root) + "\n"
+        if root in tree:
+            subtree = tree[root]
+            for word, distance in subtree.keys():
+                formatted += self.format_tree(subtree, (word, distance), indentation + 2)
+
+        return formatted
+
