@@ -1,54 +1,50 @@
 import autocomplete
+from BKTree import BKTree
 import cPickle
 import curses
 from curses import wrapper
 import os.path
 import re
+from SuggestTree import SuggestTree
 
 
-def read_words(filenames):
+def read_words(filename):
     """Read newline-separated words from file."""
-    for filename in filenames:
-        words = []
-        with open(filename) as word_file:
-            words += [word.lower().rstrip() for word
-                in word_file.readlines()
-                if re.match("^[a-z]+$", word)]
-
-        return words
+    with open(filename) as word_file:
+        return [word.lower().rstrip() for word
+            in word_file.readlines()
+            if re.match("^[a-z]+$", word)]
 
 
-def load_bk_tree(filename):
-    """Load pickled BK-tree from file."""
+def dump(obj, filename):
+    """Pickle object and dump to file."""
+    cPickle.dump(obj, open(filename, "wb"))
+
+
+def load(filename):
+    """Load pickled object from file."""
     return cPickle.load(open(filename, "rb"))
 
 
-def gen_bk_tree(words):
-    """Generate BK-tree from words."""
-    return autocomplete.build_bktree(words)
+def gen_suggest_tree(words):
+    """Generate SuggestTree from words."""
+    suggest_tree = SuggestTree()
+    for word in words:
+        suggest_tree.add(word)
+
+    return suggest_tree
 
 
-def dump_bk_tree(bk_tree, filename):
-    """Pickle BK-tree and dump to file."""
-    cPickle.dump(bk_tree, open(filename, "wb"))
+def gen_bktree(words):
+    """Generate BKTree from words."""
+    bktree = BKTree()
+    for word in words:
+        bktree.add(word)
+
+    return bktree
 
 
-def load_trie(filename):
-    """Load pickled BK-tree from file."""
-    return cPickle.load(open(filename, "rb"))
-
-
-def gen_trie(words):
-    """Generate BK-tree from words."""
-    return autocomplete.build_trie(words)
-
-
-def dump_trie(trie, filename):
-    """Pickle BK-tree and dump to file."""
-    cPickle.dump(trie, open(filename, "wb"))
-
-
-def run_autocomplete_console(stdscr, trie, bk_tree):
+def run_autocomplete_console(stdscr, suggest_tree, bktree):
     """Run console for testing basic auto-complete functionality."""
     prefix = ""
     message = "\n".join(["Auto-complete ready.",
@@ -68,11 +64,10 @@ def run_autocomplete_console(stdscr, trie, bk_tree):
         else:
             continue
 
-        top_matches = autocomplete.autocomplete(trie, bk_tree, prefix)
-
         stdscr.clear()
         stdscr.addstr(message)
         if len(prefix) >= 1:
+            top_matches = autocomplete.autocomplete(suggest_tree, bktree, prefix)
             stdscr.addstr(prefix + "\n")
             stdscr.addstr(str(top_matches) + "\n")
         stdscr.refresh()
@@ -82,26 +77,28 @@ def main(stdscr):
     curses.cbreak()
     stdscr.keypad(True)
 
-    trie = None
-    bk_tree = None
-    trie_filename = "trie.p"
-    bktree_filename = "bk_tree.p"
-    words_filenames = ["words", "connectives"]
-    if os.path.isfile(trie_filename) and os.path.isfile(bktree_filename):
-        stdscr.addstr("Loading serialized Trie and BK-tree from file...\n")
+    suggest_tree = None
+    bktree = None
+    suggest_tree_filename = "suggest_tree.p"
+    bktree_filename = "bktree.p"
+    words_filename = "words"
+    if (os.path.isfile(suggest_tree_filename) and
+            os.path.isfile(bktree_filename)):
+        stdscr.addstr("Loading serialized SuggestTree and BKTree from "
+                "file...\n")
         stdscr.refresh()
-        trie = load_trie(trie_filename)
-        bk_tree = load_bk_tree(bktree_filename)
+        suggest_tree = load(suggest_tree_filename)
+        bktree = load(bktree_filename)
     else:
-        stdscr.addstr("Building Trie and BK-tree...\n")
+        stdscr.addstr("Building SuggestTree and BKTree...\n")
         stdscr.refresh()
-        words = read_words(words_filenames)
-        trie = gen_trie(words)
-        bk_tree = gen_bk_tree(words)
-        dump_trie(trie, trie_filename)
-        dump_bk_tree(bk_tree, bktree_filename)
+        words = read_words(words_filename)
+        suggest_tree = gen_suggest_tree(words)
+        bktree = gen_bktree(words)
+        dump(suggest_tree, suggest_tree_filename)
+        dump(bktree, bktree_filename)
 
-    run_autocomplete_console(stdscr, trie, bk_tree)
+    run_autocomplete_console(stdscr, suggest_tree, bktree)
 
 
 wrapper(main)
