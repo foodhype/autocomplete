@@ -2,7 +2,7 @@
 
 
 def edit_distance(string1, string2):
-    """Calculate edit distance between two string1 and string2."""
+    """Calculate edit distance between string1 and string2."""
     distance = []
     for _ in xrange(len(string1) + 1):
         distance.append([0 for _ in xrange(len(string2) + 1)])
