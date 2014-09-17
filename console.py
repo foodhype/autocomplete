@@ -52,21 +52,25 @@ def run_autocomplete_console(stdscr, suggest_tree, bktree):
     stdscr.addstr(message)
 
     while True:
-        c = stdscr.getch()
-        if c == 3 or c == 4 or c == ord("\n"):
+        letter_ascii_code = stdscr.getch()
+        if (letter_ascii_code == 3 or
+                    letter_ascii_code == 4 or
+                    letter_ascii_code == ord("\n")):
             break
         # KEY_BACKSPACE constant is OS-dependent (i.e. unreliable).
-        elif c == curses.KEY_BACKSPACE or c == curses.KEY_DC:
+        elif (letter_ascii_code == curses.KEY_BACKSPACE or
+                letter_ascii_code == curses.KEY_DC):
             prefix = "" if len(prefix) <= 1 else prefix[:-1]
-        elif 0 <= c < 128:
-            prefix += chr(c)
+        elif 0 <= letter_ascii_code < 128:
+            prefix += chr(letter_ascii_code)
         else:
             continue
 
         stdscr.clear()
         stdscr.addstr(message)
         if len(prefix) >= 1:
-            top_matches = autocomplete.autocomplete(suggest_tree, bktree, prefix)
+            top_matches = autocomplete.autocomplete(
+                    suggest_tree, bktree, prefix)
             stdscr.addstr(prefix + "\n")
             stdscr.addstr(str(top_matches) + "\n")
         stdscr.refresh()
